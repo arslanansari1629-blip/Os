@@ -36,14 +36,22 @@
   }
 
   /* ---------- Data loading ---------- */
+  function fallbackSchedule() {
+    return { batches: (CONFIG.SCHEDULE && CONFIG.SCHEDULE.batches) || CONFIG.BATCHES || [], classes: (CONFIG.SCHEDULE && CONFIG.SCHEDULE.classes) || [] };
+  }
+
   function loadData() {
-    // Prefer a live API endpoint if the owner configured one; otherwise use bundled schedule.json.
-    var source = (CONFIG.CLASSES_API || '').trim() || '/schedule.json';
-    return fetch(source, { cache: 'no-cache' })
+    // Prefer a live API endpoint if the owner configured one; otherwise use bundled schedule data,
+    // then schedule.json, with SCHEDULE in config.js as final fallback.
+    var api = (CONFIG.CLASSES_API || '').trim();
+    if (api) {
+      return fetch(api, { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .catch(fallbackSchedule);
+    }
+    return fetch('/schedule.json', { cache: 'no-cache' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .catch(function () {
-        return { batches: CONFIG.BATCHES || [], classes: [] };
-      });
+      .catch(fallbackSchedule);
   }
 
   /* ---------- Rendering ---------- */
